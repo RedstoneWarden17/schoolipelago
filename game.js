@@ -2,6 +2,7 @@ let socket = null;
 const GAME_NAME = "HighSchoolRandomizer"; 
 let currentDay = 1;
 let checkedLocationCache = [];
+let isLocalDebugMode = false; // Flag to trace offline emulation state
 
 // Track collected inventory counts internally
 let currentInventory = {
@@ -31,8 +32,20 @@ const classLocationData = {
     10: ["Maths", "Food Studies", "PE", "Class where you do nothing", "Environmental Science"]
 };
 
+// Item Name Index Lookup for Log Printing Function
+const itemNamesIndex = {
+    5001: "Pencilcase",
+    5002: "Locker Key",
+    5003: "Ability to Open A Door (One time use)",
+    5004: "Spare Key",
+    5005: "Cheaty Pocket Pencil",
+    5006: "Eraser Scraps",
+    5007: "Pen With No Ink",
+    5008: "Useless Highlighter"
+};
+
 document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById('connect-btn').addEventListener('click', initConnection);
+    document.getElementById('connect-btn').addEventListener('click', handleConnectAction);
     renderInterface();
 });
 
@@ -62,7 +75,6 @@ function renderInterface() {
         const pencilId = 3000 + d;
         pencilsContainer.innerHTML += `<button class="location-btn sub-btn" id="loc-${pencilId}" data-id="${pencilId}" disabled onclick="checkLocation(${pencilId})">Day ${d} Pencil</button>`;
         
-        // Add inactive elements to your keyshelf display
         keyshelf.innerHTML += `<div class="shelf-key-badge locked" id="shelf-key-${d}">Day ${d} Key 🔒</div>`;
     }
     updateCompletionStats();
@@ -82,7 +94,7 @@ function renderClasses() {
                 <h4>Period ${index + 1}</h4>
                 <p>${className}</p>
                 <button class="location-btn" id="loc-${locationId}" data-id="${locationId}" 
-                    ${(socket && !isChecked) ? '' : 'disabled'} onclick="checkLocation(${locationId})">
+                    ${((socket || isLocalDebugMode) && !isChecked) ? '' : 'disabled'} onclick="checkLocation(${locationId})">
                     ${isChecked ? '✓ Attended' : 'Attend Class'}
                 </button>
             </div>
@@ -90,30 +102,23 @@ function renderClasses() {
     });
 }
 
-/**
- * Validates consumption rule requirements before checking key locations.
- */
 function tryUnlockKeyLocation(locationId, dayNumber) {
-    if (!socket || checkedLocationCache.includes(locationId)) return;
+    if ((!socket && !isLocalDebugMode) || checkedLocationCache.includes(locationId)) return;
 
-    // Enforce consumption rule check
     if (currentInventory[5004] < 1) {
         alert("Action Locked: You need at least 1 'Spare Key' item in your Collected Inventory pool to unlock this location!");
         return;
     }
 
-    // Process logic changes client-side
     currentInventory[5004] -= 1;
     document.getElementById('spare-key-pool-count').innerText = `x${currentInventory[5004]}`;
     
     unlockedDayKeys.push(dayNumber);
     updateKeyshelfUI();
     
-    // Fire checked payload to your server
     checkLocation(locationId);
     logMessage(`Consumed 1 Spare Key item to open Day ${dayNumber} Lock!`, "location-sent");
     
-    // Refresh connection rules across buttons
     evaluateKeyButtonsState();
 }
 
@@ -132,8 +137,7 @@ function evaluateKeyButtonsState() {
         const id = parseInt(btn.getAttribute('data-id'));
         const alreadyChecked = checkedLocationCache.includes(id);
         
-        // Disable button if location is checked, or if player has no keys left
-        btn.disabled = !socket || alreadyChecked;
+        btn.disabled = (!socket && !isLocalDebugMode) || alreadyChecked;
         if (alreadyChecked) {
             btn.innerText = "✓ Key Obtained";
         }
@@ -147,8 +151,38 @@ function updateCompletionStats() {
     document.getElementById('completion-stats').innerText = `Checked: ${totalChecked} / ${totalLocations} (${percentage}%)`;
 }
 
-function initConnection() {
-    let serverInput = document.getElementById('server-url').value.trim();
+/**
+ * Routes connection requests. Intercepts credentials matching "RedstoneWarden17"
+ * to start the local simulation mode.
+ */
+function handleConnectAction() {
+    const serverInput = document.getElementById('server-url').value.trim();
+    const passwordInput = document.getElementById('password').value.trim();
+
+    // Check both targets for the debug phrase
+    if (serverInput.includes("RedstoneWarden17") && passwordInput === "RedstoneWarden17") {
+        initLocalDebugMode();
+    } else {
+        isLocalDebugMode = false;
+        initConnection(serverInput);
+    }
+}
+
+/**
+ * Bypasses network parameters completely to emulate an active server connection.
+ */
+function initLocalDebugMode() {
+    isLocalDebugMode = true;
+    if (socket) { socket.close(); socket = null; }
+
+    logMessage("🚨 DEBUG MODE ENABLED: Emulating active server layer local-side.", "system");
+    logMessage("Checking any item location will award a randomized item from your item pool.", "system");
+    
+    toggleUIState(true);
+    updateCompletionStats();
+}
+
+function initConnection(serverInput) {
     if (!serverInput.startsWith('ws://') && !serverInput.startsWith('wss://')) {
         serverInput = 'ws://' + serverInput;
     }
@@ -179,7 +213,6 @@ function handlePacket(packet) {
             logMessage("Authentication approved!", "system");
             checkedLocationCache = packet.checked_locations;
             
-            // Build key maps based on pre-cleared coordinates
             unlockedDayKeys = [];
             for(let d=1; d<=10; d++) {
                 if(checkedLocationCache.includes(2000 + d)) unlockedDayKeys.push(d);
@@ -193,31 +226,37 @@ function handlePacket(packet) {
             
         case 'ReceivedItems':
             packet.items.forEach(item => {
-                const itemId = item.item;
-                if (currentInventory.hasOwnProperty(itemId)) {
-                    currentInventory[itemId] += 1;
-                    
-                    const element = document.getElementById(`item-${itemId}`);
-                    if (element) {
-                        // Handle progressive tier elements vs simple quantity stacks
-                        if (itemId === 5001 || itemId === 5002) {
-                            const capValue = Math.min(currentInventory[itemId], 10);
-                            element.querySelector('.item-qty').innerText = `Lv. ${capValue} / 10`;
-                        } else {
-                            element.querySelector('.item-qty').innerText = `x${currentInventory[itemId]}`;
-                        }
-                        element.classList.add('acquired');
-                    }
-                }
+                awardItemToInventory(item.item);
             });
-            // Update button states if key item count changes
-            evaluateKeyButtonsState();
             break;
             
         case 'PrintJSON':
             if (packet.text) logMessage(packet.text, "system");
             break;
     }
+}
+
+/**
+ * Handles incoming items for both live connections and the offline sandbox emulator.
+ */
+function awardItemToInventory(itemId) {
+    if (currentInventory.hasOwnProperty(itemId)) {
+        currentInventory[itemId] += 1;
+        
+        const element = document.getElementById(`item-${itemId}`);
+        if (element) {
+            if (itemId === 5001 || itemId === 5002) {
+                const capValue = Math.min(currentInventory[itemId], 10);
+                element.querySelector('.item-qty').innerText = `Lv. ${capValue} / 10`;
+            } else {
+                element.querySelector('.item-qty').innerText = `x${currentInventory[itemId]}`;
+            }
+            element.classList.add('acquired');
+        }
+        const itemName = itemNamesIndex[itemId] || `Unknown Item #${itemId}`;
+        logMessage(`Received Item: ${itemName}`, "item-received");
+    }
+    evaluateKeyButtonsState();
 }
 
 function sendConnectPacket() {
@@ -237,7 +276,7 @@ function sendConnectPacket() {
 
 function toggleUIState(connected) {
     const status = document.getElementById('status-text');
-    status.innerText = connected ? "Status: Connected" : "Status: Disconnected";
+    status.innerText = connected ? (isLocalDebugMode ? "Status: Connected (DEBUG)" : "Status: Connected") : "Status: Disconnected";
     status.className = connected ? "connected" : "disconnected";
     
     renderClasses();
@@ -250,15 +289,30 @@ function toggleUIState(connected) {
 }
 
 function checkLocation(id) {
-    if (!socket || checkedLocationCache.includes(id)) return;
+    if ((!socket && !isLocalDebugMode) || checkedLocationCache.includes(id)) return;
     
-    socket.send(JSON.stringify([{ cmd: 'LocationChecks', locations: [id] }]));
+    // Live Server Pipeline
+    if (socket) {
+        socket.send(JSON.stringify([{ cmd: 'LocationChecks', locations: [id] }]));
+    }
+    
+    // Offline Emulator Layer - Drops a random item from your item pool instantly
+    if (isLocalDebugMode) {
+        const registeredItemIds =;
+        const randomItemId = registeredItemIds[Math.floor(Math.random() * registeredItemIds.length)];
+        awardItemToInventory(randomItemId);
+    }
+
     checkedLocationCache.push(id);
     
     const targetBtn = document.getElementById(`loc-${id}`);
     if (targetBtn) {
         targetBtn.disabled = true;
-        targetBtn.innerText = targetBtn.classList.contains('sub-btn') ? "✓ Found" : "✓ Attended";
+        if (targetBtn.classList.contains('key-unlock-btn')) {
+            targetBtn.innerText = "✓ Key Obtained";
+        } else {
+            targetBtn.innerText = targetBtn.classList.contains('sub-btn') ? "✓ Found" : "✓ Attended";
+        }
     }
     updateCompletionStats();
 }
