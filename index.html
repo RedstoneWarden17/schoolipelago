@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archipelago Web Game Interface</title>
+    <title>High School Archipelago Client</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,41 +16,105 @@
                 <input type="password" id="password" placeholder="Password (Optional)">
                 <button id="connect-btn">Connect to Multiworld</button>
             </div>
-            <div id="status-text" class="disconnected">Status: Disconnected</div>
+            <div class="status-bar">
+                <div id="status-text" class="disconnected">Status: Disconnected</div>
+                <div id="completion-stats" class="stats-counter">Checked: 0 / 70 (0%)</div>
+            </div>
         </header>
 
-        <!-- MAIN GAME VIEWPORT -->
+        <!-- MAIN LAYOUT -->
         <div id="main-layout">
             <!-- GAME SCREEN / ACTIONS -->
             <section id="gameplay-area">
-                <h2>Game World Interaction</h2>
-                <p>Interact with the world objects below to check locations and send items to other players.</p>
+                <h2>🏫 School Timetable (Locations)</h2>
                 
-                <div class="action-grid">
-                    <button class="location-btn" data-location-id="1001" disabled>Chest 1: Open Chest</button>
-                    <button class="location-btn" data-location-id="1002" disabled>Chest 2: Defeat Mini-Boss</button>
-                    <button class="location-btn" data-location-id="1003" disabled>Chest 3: Inspect Fountain</button>
+                <div class="day-tabs">
+                    <button class="tab-btn active" onclick="switchDay(1)">Day 1</button>
+                    <button class="tab-btn" onclick="switchDay(2)">Day 2</button>
+                    <button class="tab-btn" onclick="switchDay(3)">Day 3</button>
+                    <button class="tab-btn" onclick="switchDay(4)">Day 4</button>
+                    <button class="tab-btn" onclick="switchDay(5)">Day 5</button>
+                    <button class="tab-btn" onclick="switchDay(6)">Day 6</button>
+                    <button class="tab-btn" onclick="switchDay(7)">Day 7</button>
+                    <button class="tab-btn" onclick="switchDay(8)">Day 8</button>
+                    <button class="tab-btn" onclick="switchDay(9)">Day 9</button>
+                    <button class="tab-btn" onclick="switchDay(10)">Day 10</button>
                 </div>
 
+                <div id="classes-container" class="action-grid"></div>
+
+                <hr class="section-divider">
+
+                <!-- Auxiliary Search Subpanel -->
+                <h2>🔍 Daily Search Objectives</h2>
+                <div class="search-panel">
+                    <div class="search-row">
+                        <h3>🔑 Use Spare Key Item to Unlock Door</h3>
+                        <div id="keys-container" class="item-action-grid"></div>
+                    </div>
+                    <div class="search-row">
+                        <h3>✏️ Pocket Pencils</h3>
+                        <div id="pencils-container" class="item-action-grid"></div>
+                    </div>
+                </div>
+
+                <!-- Unlocked Static Display Shelf -->
+                <h2>🗝️ Unlocked Daily Key Chains</h2>
+                <div id="unlocked-keyshelf" class="keyshelf-grid">
+                    <!-- Day keys populate here statically when consumed -->
+                </div>
+
+                <h3>📜 Server Activities Log</h3>
                 <div id="game-log">
-                    <div class="log-entry system">Welcome. Enter server details above to begin.</div>
+                    <div class="log-entry system">Welcome. Connect to map your customized consumable item rules.</div>
                 </div>
             </section>
 
             <!-- INVENTORY SIDEBAR -->
             <aside id="inventory-panel">
-                <h3>Received Items</h3>
-                <div id="inventory-grid">
-                    <div class="item-card" id="item-2001" data-count="0">
-                        <span class="item-name">Sword Progression</span>
+                <h3>🎒 Collected Inventory</h3>
+                
+                <div class="inventory-section">
+                    <h4>⭐ Progressive Items</h4>
+                    <div class="item-card item-progression" id="item-5001" data-count="0">
+                        <span class="item-name">Pencilcase Tier</span>
+                        <span class="item-qty">Lv. 0 / 10</span>
+                    </div>
+                    <div class="item-card item-progression" id="item-5002" data-count="0">
+                        <span class="item-name">Locker Key Tier</span>
+                        <span class="item-qty">Lv. 0 / 10</span>
+                    </div>
+                </div>
+
+                <div class="inventory-section">
+                    <h4>🛠️ Usable Pool</h4>
+                    <div class="item-card item-useful" id="item-5003" data-count="0">
+                        <span class="item-name">Ability to Open A Door</span>
                         <span class="item-qty">x0</span>
                     </div>
-                    <div class="item-card" id="item-2002" data-count="0">
-                        <span class="item-name">Bombs</span>
+                    <!-- Spare Key Item counter target -->
+                    <div class="item-card item-useful" id="item-5004" data-count="0">
+                        <span class="item-name">Unused Spare Keys 🗝️</span>
+                        <span class="item-qty" id="spare-key-pool-count">x0</span>
+                    </div>
+                    <div class="item-card item-useful" id="item-5005" data-count="0">
+                        <span class="item-name">Cheaty Pocket Pencil ⏳</span>
                         <span class="item-qty">x0</span>
                     </div>
-                    <div class="item-card" id="item-2003" data-count="0">
-                        <span class="item-name">Hookshot</span>
+                </div>
+
+                <div class="inventory-section">
+                    <h4>🗑️ Junk Filler</h4>
+                    <div class="item-card item-junk" id="item-5006" data-count="0">
+                        <span class="item-name">Eraser Scraps</span>
+                        <span class="item-qty">x0</span>
+                    </div>
+                    <div class="item-card item-junk" id="item-5007" data-count="0">
+                        <span class="item-name">Pen With No Ink</span>
+                        <span class="item-qty">x0</span>
+                    </div>
+                    <div class="item-card item-junk" id="item-5008" data-count="0">
+                        <span class="item-name">Useless Highlighter</span>
                         <span class="item-qty">x0</span>
                     </div>
                 </div>
