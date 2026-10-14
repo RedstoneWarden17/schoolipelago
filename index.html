@@ -3,62 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archipelago: Custom Game Setup</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Archipelago Web Game Interface</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
-        <h1>Custom Game Archipelago Randomizer</h1>
-        <p>Download mods, configure configurations, and join the multiworld.</p>
-        <div id="release-container">
-            <a id="download-button" href="#" class="btn">Fetching Latest .apworld...</a>
+    <div id="game-container">
+        <!-- SERVER CONNECT BAR -->
+        <header id="connection-panel">
+            <div class="input-row">
+                <input type="text" id="server-url" value="archipelago.gg:38281" placeholder="server:port">
+                <input type="text" id="slot-name" placeholder="Slot Name">
+                <input type="password" id="password" placeholder="Password (Optional)">
+                <button id="connect-btn">Connect to Multiworld</button>
+            </div>
+            <div id="status-text" class="disconnected">Status: Disconnected</div>
+        </header>
+
+        <!-- MAIN GAME VIEWPORT -->
+        <div id="main-layout">
+            <!-- GAME SCREEN / ACTIONS -->
+            <section id="gameplay-area">
+                <h2>Game World Interaction</h2>
+                <p>Interact with the world objects below to check locations and send items to other players.</p>
+                
+                <div class="action-grid">
+                    <button class="location-btn" data-location-id="1001" disabled>Chest 1: Open Chest</button>
+                    <button class="location-btn" data-location-id="1002" disabled>Chest 2: Defeat Mini-Boss</button>
+                    <button class="location-btn" data-location-id="1003" disabled>Chest 3: Inspect Fountain</button>
+                </div>
+
+                <div id="game-log">
+                    <div class="log-entry system">Welcome. Enter server details above to begin.</div>
+                </div>
+            </section>
+
+            <!-- INVENTORY SIDEBAR -->
+            <aside id="inventory-panel">
+                <h3>Received Items</h3>
+                <div id="inventory-grid">
+                    <div class="item-card" id="item-2001" data-count="0">
+                        <span class="item-name">Sword Progression</span>
+                        <span class="item-qty">x0</span>
+                    </div>
+                    <div class="item-card" id="item-2002" data-count="0">
+                        <span class="item-name">Bombs</span>
+                        <span class="item-qty">x0</span>
+                    </div>
+                    <div class="item-card" id="item-2003" data-count="0">
+                        <span class="item-name">Hookshot</span>
+                        <span class="item-qty">x0</span>
+                    </div>
+                </div>
+            </aside>
         </div>
-    </header>
+    </div>
 
-    <main>
-        <!-- Instructions Section -->
-        <section class="instructions">
-            <h2>⚙️ Setup Instructions</h2>
-            <ol>
-                <li>Install the base program via the [Archipelago Setup Page](https://archipelago.gg/tutorial/Archipelago/setup_en "Archipelago Setup Guide").</li>
-                <li>Click the download button above to grab the latest <code>.apworld</code> file.</li>
-                <li>Move the downloaded <code>.apworld</code> file into: <br><code>C:\ProgramData\Archipelago\custom_worlds</code></li>
-            </ol>
-        </section>
-
-        <!-- YAML Builder Section -->
-        <section class="yaml-builder">
-            <h2>🎛️ Player Settings Configuration</h2>
-            <p>Adjust your world options below to compile your custom player <code>.yaml</code> file.</p>
-            
-            <form id="yaml-form">
-                <div class="form-group">
-                    <label for="player_name">Player Name:</label>
-                    <input type="text" id="player_name" value="Player1" required placeholder="Case-sensitive slot name">
-                </div>
-
-                <div class="form-group">
-                    <label for="game_goal">Game Goal:</label>
-                    <select id="game_goal">
-                        <option value="defeat_boss">Defeat Final Boss</option>
-                        <option value="all_locations">Clear All Locations</option>
-                    </select>
-                </div>
-
-                <div class="form-group check-group">
-                    <input type="checkbox" id="hard_mode">
-                    <label for="hard_mode">Enable Brutal Logic / Hard Mode</label>
-                </div>
-
-                <div class="form-group">
-                    <label for="exp_modifier">EXP/Progression Multiplier (1x - 5x):</label>
-                    <input type="range" id="exp_modifier" min="1" max="5" value="1" oninput="this.nextElementSibling.value = this.value">
-                    <output>1</output>x
-                </div>
-
-                <button type="button" id="generate-yaml-btn" class="btn btn-success">Download .yaml Config</button>
-            </form>
-        </section>
-    </main>
+    <script src="game.js"></script>
 </body>
 </html>
