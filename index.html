@@ -1,1 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archipelago: Custom Game Setup</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Custom Game Archipelago Randomizer</h1>
+        <p>Download mods, configure configurations, and join the multiworld.</p>
+        <div id="release-container">
+            <a id="download-button" href="#" class="btn">Fetching Latest .apworld...</a>
+        </div>
+    </header>
 
+    <main>
+        <!-- Instructions Section -->
+        <section class="instructions">
+            <h2>⚙️ Setup Instructions</h2>
+            <ol>
+                <li>Install the base program via the [Archipelago Setup Page](https://archipelago.gg/tutorial/Archipelago/setup_en "Archipelago Setup Guide").</li>
+                <li>Click the download button above to grab the latest <code>.apworld</code> file.</li>
+                <li>Move the downloaded <code>.apworld</code> file into: <br><code>C:\ProgramData\Archipelago\custom_worlds</code></li>
+            </ol>
+        </section>
+
+        <!-- YAML Builder Section -->
+        <section class="yaml-builder">
+            <h2>🎛️ Player Settings Configuration</h2>
+            <p>Adjust your world options below to compile your custom player <code>.yaml</code> file.</p>
+            
+            <form id="yaml-form">
+                <div class="form-group">
+                    <label for="player_name">Player Name:</label>
+                    <input type="text" id="player_name" value="Player1" required placeholder="Case-sensitive slot name">
+                </div>
+
+                <div class="form-group">
+                    <label for="game_goal">Game Goal:</label>
+                    <select id="game_goal">
+                        <option value="defeat_boss">Defeat Final Boss</option>
+                        <option value="all_locations">Clear All Locations</option>
+                    </select>
+                </div>
+
+                <div class="form-group check-group">
+                    <input type="checkbox" id="hard_mode">
+                    <label for="hard_mode">Enable Brutal Logic / Hard Mode</label>
+                </div>
+
+                <div class="form-group">
+                    <label for="exp_modifier">EXP/Progression Multiplier (1x - 5x):</label>
+                    <input type="range" id="exp_modifier" min="1" max="5" value="1" oninput="this.nextElementSibling.value = this.value">
+                    <output>1</output>x
+                </div>
+
+                <button type="button" id="generate-yaml-btn" class="btn btn-success">Download .yaml Config</button>
+            </form>
+        </section>
+    </main>
+</body>
+</html>
