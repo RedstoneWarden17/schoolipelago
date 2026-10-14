@@ -153,16 +153,17 @@ function updateCompletionStats() {
 
 /**
  * Routes connection requests. Intercepts credentials matching "RedstoneWarden17"
- * to start the local simulation mode.
+ * to start the local simulation mode without creating network sockets.
  */
 function handleConnectAction() {
     const serverInput = document.getElementById('server-url').value.trim();
     const passwordInput = document.getElementById('password').value.trim();
 
-    // Check both targets for the debug phrase
+    // 1. Check if the user is triggering Debug Mode
     if (serverInput.includes("RedstoneWarden17") && passwordInput === "RedstoneWarden17") {
         initLocalDebugMode();
     } else {
+        // 2. Only attempt a real server connection if it's NOT debug mode
         isLocalDebugMode = false;
         initConnection(serverInput);
     }
@@ -173,7 +174,13 @@ function handleConnectAction() {
  */
 function initLocalDebugMode() {
     isLocalDebugMode = true;
-    if (socket) { socket.close(); socket = null; }
+    
+    // Safely drop any existing socket without creating a new one
+    if (socket) { 
+        socket.onclose = null; // Prevent triggering accidental disconnect alerts
+        socket.close(); 
+        socket = null; 
+    }
 
     logMessage("🚨 DEBUG MODE ENABLED: Emulating active server layer local-side.", "system");
     logMessage("Checking any item location will award a randomized item from your item pool.", "system");
@@ -183,25 +190,38 @@ function initLocalDebugMode() {
 }
 
 function initConnection(serverInput) {
-    if (!serverInput.startsWith('ws://') && !serverInput.startsWith('wss://')) {
+    // Automatically elevate to secure wss:// if hosted on HTTPS (like GitHub Pages)
+    if (window.location.protocol === "https:" && !serverInput.startsWith('wss://')) {
+        // Strip out ws:// if the user typed it manually, then prepend wss://
+        let cleanInput = serverInput.replace(/^ws:\/\//, '');
+        if (!cleanInput.startsWith('wss://')) {
+            cleanInput = 'wss://' + cleanInput;
+        }
+        serverInput = cleanInput;
+    } else if (!serverInput.startsWith('ws://') && !serverInput.startsWith('wss://')) {
         serverInput = 'ws://' + serverInput;
     }
 
     logMessage(`Connecting: ${serverInput}...`);
-    socket = new WebSocket(serverInput);
+    try {
+        socket = new WebSocket(serverInput);
 
-    socket.onopen = () => logMessage("Network channel open.", "system");
-    socket.onerror = (err) => logMessage("Connection error.", "danger");
-    
-    socket.onmessage = (event) => {
-        const packets = JSON.parse(event.data);
-        packets.forEach(handlePacket);
-    };
+        socket.onopen = () => logMessage("Network channel open.", "system");
+        socket.onerror = (err) => logMessage("Connection error occurred.", "danger");
+        
+        socket.onmessage = (event) => {
+            const packets = JSON.parse(event.data);
+            packets.forEach(handlePacket);
+        };
 
-    socket.onclose = () => {
-        logMessage("Disconnected.", "danger");
+        socket.onclose = () => {
+            logMessage("Disconnected.", "danger");
+            toggleUIState(false);
+        };
+    } catch (e) {
+        logMessage(`Security block or failure creating socket: ${e.message}`, "danger");
         toggleUIState(false);
-    };
+    }
 }
 
 function handlePacket(packet) {
